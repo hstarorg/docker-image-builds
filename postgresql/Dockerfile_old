@@ -1,0 +1,27 @@
+FROM rockylinux/rockylinux:9.4-ubi
+
+# Install base packages
+RUN dnf install -y sudo
+
+# Install PostgreSQL
+RUN dnf install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-9-aarch64/pgdg-redhat-repo-latest.noarch.rpm; \
+    dnf -qy module disable postgresql; \
+    dnf install -y postgresql17-server
+
+
+# Initialize the database
+ENV PGDATA="/var/lib/postgresql/data"
+RUN install --verbose --directory --owner postgres --group postgres --mode 1777 "$PGDATA"
+VOLUME ["/var/lib/postgresql/data"]
+
+
+# Install pig
+RUN curl -fsSL https://repo.pigsty.cc/pig | bash && \
+    pig repo add pigsty pgdg -u
+
+# Run the database
+RUN sudo -u postgres /usr/pgsql-17/bin/initdb -D "$PGDATA" && \
+    sudo -u postgres /usr/pgsql-17/bin/pg_ctl -D "$PGDATA" -l "$PGDATA/logfile" start
+
+EXPOSE 5432
+CMD ["tail", "-f", "/dev/null"]
